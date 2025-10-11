@@ -7,7 +7,13 @@
 #include <string>
 
 bool checkEcho(std::string& path) {
-return (path.starts_with("/echo/"));
+	return (path.starts_with("/echo/"));
+}
+
+std::string fetchParameter(std::string requestStr, std::string parameter) {
+	std::size_t parameterPosition = requestStr.find(parameter);
+	std::size_t lineEnd = requestStr.find("\r", parameterPosition);
+  return (requestStr.substr(parameterPosition + parameter.size(), lineEnd) );
 }
 
 int main() {
@@ -37,77 +43,89 @@ int main() {
 		std::cout << "socket succsessfully bound!" << '\n';
 	}
 	//listen on the socket
-	constexpr int maxConnections {3};
-	if(listen(serverSocket, maxConnections) == -1) {
-		std::cout << "listen(): Error listening on socket " << '\n';
-	}
-	else {
-		std::cout << "listen(): is OK, waiting for connections..." << '\n';
-	}
-	int acceptSocket {};
-	acceptSocket = accept(serverSocket, nullptr, nullptr);
-	if(acceptSocket == -1) {
-		perror("Error at socket()");
-		return -1;
-	}
-	//recieve data into the socket
-	char receiveBuffer[300] {};
-	std::string str;
-	ssize_t recvByteCount = recv(acceptSocket, receiveBuffer,sizeof(receiveBuffer), 0);
-	if(recvByteCount == -1) {
-		std::cout << "server send error";
-		close(acceptSocket);
-		return -1;
-	}
-	else {
-		//std::string str(receiveBuffer, static_cast<size_t>(recvByteCount));
-		str= receiveBuffer;
-		std::cout << "data recieved: \n" << str << '\n';
-	}
-	
-	std::istringstream data { str };
-	std::string header;
-	std::getline(data, header);
-	std::string method, path, version;
-	std::istringstream headerLine {header};
-	headerLine >> method >> path >> version;
-	
-	std::stringstream response;
-	std::cout << "path: " << path << '\n';
+	while(true) {
+		constexpr int maxConnections {3};
+		if(listen(serverSocket, maxConnections) == -1) {
+			std::cout << "listen(): Error listening on socket " << '\n';
+		}
+		else {
+			std::cout << "listen(): is OK, waiting for connections..." << '\n';
+		}
+		int acceptSocket {};
+		acceptSocket = accept(serverSocket, nullptr, nullptr);
+		if(acceptSocket == -1) {
+			perror("Error at socket()");
+			return -1;
+		}
+		//recieve data into the socket
+		char receiveBuffer[300] {};
+		std::string str;
+		ssize_t recvByteCount = recv(acceptSocket, receiveBuffer,sizeof(receiveBuffer), 0);
+		if(recvByteCount == -1) {
+			std::cout << "server send error";
+			close(acceptSocket);
+			return -1;
+		}
+		else {
+			//std::string str(receiveBuffer, static_cast<size_t>(recvByteCount));
+			str= receiveBuffer;
+			std::cout << "data recieved: \n" << str << '\n';
+		}
 
-	if(path == "/") {
-		response <<
- 			"HTTP/1.1 200 OK\r\n\r\n"
-    	"Content-Type: text/html; charset=UTF-8\r\n";
-  	std::cout << "sending code 200\n";
-	}
+		std::istringstream data { str };
+		std::string header;
+		std::getline(data, header);
+		std::string method, path, version;
+		std::istringstream headerLine {header};
+		headerLine >> method >> path >> version;
 
-	else if(checkEcho(path)) {
-		path.erase(0, 6);
-		response <<
- 			"HTTP/1.1 200 OK\r\n\r\n"
-  		"Content-Type: text/plain\r\n"
-  		"Content-Length: " << path.size() << "\r\n"
-  		"\r\n" << path;
-  	std::cout << "sending code 200\n";
-	
-	}
-	else {
-	response << 
-			"HTTP/1.1 404 Not Found\r\n\r\n"
-    	"Content-Type: text/html; charset=UTF-8\r\n";
+		std::stringstream response;
+		std::cout << "path: " << path << '\n';
+
+		if(path == "/") {
+			response <<
+ 				"HTTP/1.1 200 OK\r\n\r\n"
+    		"Content-Type: text/html; charset=UTF-8\r\n";
+  		std::cout << "sending code 200\n";
+		}
+
+		else if ("/user-agent") {
+			std::string userAgent { fetchParameter(str, "User-Agent: ") };
+			response <<
+ 				"HTTP/1.1 200 OK\r\n\r\n"
+    		"Content-Type: text/html; charset=UTF-8\r\n"
+    		"Content-Length: " << userAgent.size() << "\r\n"
+    		"\r\n" <<
+    		userAgent;
+  		std::cout << "sending code 200\n";
+		}
+		else if(checkEcho(path)) {
+			path.erase(0, 6);
+			response <<
+ 				"HTTP/1.1 200 OK\r\n\r\n"
+  			"Content-Type: text/plain\r\n"
+  			"Content-Length: " << path.size() << "\r\n"
+  			"\r\n" << path;
+  		std::cout << "sending code 200\n";
+
+		}
+		else {
+			response << 
+				"HTTP/1.1 404 Not Found\r\n\r\n"
+    		"Content-Type: text/html; charset=UTF-8\r\n";
   		std::cout << path << " is not a valid path, sending 404\n";
-	}
+		}
 
-	//send data to the socket
-	ssize_t byteCount = { send(acceptSocket, response.str().c_str(), response.str().size(), 0) };
+		//send data to the socket
+		ssize_t byteCount = { send(acceptSocket, response.str().c_str(), response.str().size(), 0) };
 
-	if(byteCount == 0) {
-		std::cout << "server send error";
-		return -1;
-	}
-	else {
-		std::cout << "server sent " << byteCount << " bytes" << '\n';
+		if(byteCount == 0) {
+			std::cout << "server send error";
+			return -1;
+		}
+		else {
+			std::cout << "server sent " << byteCount << " bytes" << '\n';
+		}
 	}
 	close(serverSocket);
 	return 0;
