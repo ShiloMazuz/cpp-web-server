@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -85,15 +86,15 @@ int main() {
 
 		if(path == "/") {
 			response <<
- 				"HTTP/1.1 200 OK\r\n\r\n"
-    		"Content-Type: text/html; charset=UTF-8\r\n";
+ 				"HTTP/1.1 200 OK\r\n"
+    		"Content-Type: text/html; charset=UTF-8\r\n\r\n";
   		std::cout << "sending code 200\n";
 		}
 
 		else if (path == "/user-agent") {
 			std::string userAgent { fetchParameter(str, "User-Agent: ") };
 			response <<
- 				"HTTP/1.1 200 OK\r\n\r\n"
+ 				"HTTP/1.1 200 OK\r\n"
     		"Content-Type: text/html; charset=UTF-8\r\n"
     		"Content-Length: " << userAgent.size() << "\r\n"
     		"\r\n" <<
@@ -103,13 +104,40 @@ int main() {
 		else if(path.substr(0, 6) == "/echo/") {
 			path.erase(0, 6);
 			response <<
- 				"HTTP/1.1 200 OK\r\n\r\n"
+ 				"HTTP/1.1 200 OK\r\n"
   			"Content-Type: text/plain\r\n"
   			"Content-Length: " << path.size() << "\r\n"
   			"\r\n" << path << '\n';
   		std::cout << "sending code 200\n";
 
 		}
+
+		else if(path.substr(0, 7) == "/files/") {
+			path.erase(0, 7);
+			std::fstream file {};
+			file.open(path, std::ios::in);
+				if(file.is_open()) {
+			std::string line{};
+			response <<
+ 				"HTTP/1.1 200 OK\r\n"
+  			"Content-Type: text/html\r\n"
+  			"Content-Length: " << std::filesystem::file_size(path) << "\r\n"
+//  			"Connection: Close\r\n"
+  			"\r\n"; 
+				while(std::getline(file, line)) {
+  		response << line << '\n';	
+  		}
+  		//	response << '\n';
+  		std::cout << "sending code 200\n";
+  		}
+			else {
+			response << 
+				"HTTP/1.1 404 Not Found\r\n"
+    		"Content-Type: text/html; charset=UTF-8\r\n\r\n";
+  		std::cout << path << " is not a valid path, sending 404\n";
+				}
+			}
+		
 		else {
 			response << 
 				"HTTP/1.1 404 Not Found\r\n\r\n"
@@ -119,6 +147,7 @@ int main() {
 
 		//send data to the socket
 		ssize_t byteCount = { send(acceptSocket, response.str().c_str(), response.str().size(), 0) };
+		close(acceptSocket);
 
 		if(byteCount == 0) {
 			std::cout << "server send error";
@@ -127,7 +156,7 @@ int main() {
 		else {
 			std::cout << "server sent " << byteCount << " bytes" << '\n';
 		}
-	}
+}
 	close(serverSocket);
 	return 0;
 }
