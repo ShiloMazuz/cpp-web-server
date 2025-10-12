@@ -19,7 +19,16 @@ std::string fetchParameter(std::string requestStr, std::string parameter) {
   return (requestStr.substr(parameterPosition + parameter.size(), lineEnd) );
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+  using std::string_literals::operator""s;
+	bool argDirectory { false };
+	for(int i {0}; i < argc; i++) {
+	if(argv[i] == "--directory"s)
+	argDirectory = true;
+	}
+	if(argDirectory) {
+	std::cout << "using --directory argument\n";
+	}
 	//creates a socket
 	int serverSocket = -1;
 	serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -114,11 +123,11 @@ int main() {
 
 		}
 
-		else if(path.getPath().substr(0, 7) == "/files/") {
+		else if(path.getPath().substr(0, 7) == "/files/" && argDirectory) {
 			path.erase(0, 7);
 			std::fstream file {};
 			file.open(path.getPath(), std::ios::in);
-			if(file.is_open()) {
+			if(file.is_open() && !std::filesystem::is_directory(path.getPath())) {
 				std::string line{};
 				response <<
  					"HTTP/1.1 200 OK\r\n"
