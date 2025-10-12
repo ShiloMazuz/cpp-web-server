@@ -1,3 +1,4 @@
+#include "urlHandler.h"
 #include <iostream>
 #include <filesystem>
 #include <sys/socket.h>
@@ -77,21 +78,22 @@ int main() {
 		std::istringstream data { str };
 		std::string header;
 		std::getline(data, header);
-		std::string method, path, version;
+		std::string method, urlPath, version;
 		std::istringstream headerLine {header};
-		headerLine >> method >> path >> version;
+		headerLine >> method >> urlPath >> version;
+		URL path {urlPath};
 
 		std::stringstream response;
-		std::cout << "path: " << path << '\n';
+		std::cout << "path: " << path.getPath() << '\n';
 
-		if(path == "/") {
+		if(path.getPath() == "/") {
 			response <<
  				"HTTP/1.1 200 OK\r\n"
     		"Content-Type: text/html; charset=UTF-8\r\n\r\n";
   		std::cout << "sending code 200\n";
 		}
 
-		else if (path == "/user-agent") {
+		else if (path.getPath() == "/user-agent") {
 			std::string userAgent { fetchParameter(str, "User-Agent: ") };
 			response <<
  				"HTTP/1.1 200 OK\r\n"
@@ -101,54 +103,71 @@ int main() {
     		userAgent;
   		std::cout << "sending code 200\n";
 		}
-		else if(path.substr(0, 6) == "/echo/") {
+		else if(path.getPath().substr(0, 6) == "/echo/") {
 			path.erase(0, 6);
 			response <<
  				"HTTP/1.1 200 OK\r\n"
   			"Content-Type: text/plain\r\n"
-  			"Content-Length: " << path.size() << "\r\n"
-  			"\r\n" << path << '\n';
+  			"Content-Length: " << path.getPath().size() << "\r\n"
+  			"\r\n" << path.getPath() << '\n';
   		std::cout << "sending code 200\n";
 
 		}
 
-		else if(path.substr(0, 7) == "/files/") {
+		else if(path.getPath().substr(0, 7) == "/files/") {
 			path.erase(0, 7);
 			std::fstream file {};
-			file.open(path, std::ios::in);
-				if(file.is_open()) {
-			std::string line{};
-			response <<
- 				"HTTP/1.1 200 OK\r\n"
-  			"Content-Type: text/html\r\n"
-  			"Content-Length: " << std::filesystem::file_size(path) << "\r\n"
-//  			"Connection: Close\r\n"
-  			"\r\n"; 
+			file.open(path.getPath(), std::ios::in);
+			if(file.is_open()) {
+				std::string line{};
+				response <<
+ 					"HTTP/1.1 200 OK\r\n"
+  				"Content-Type: text/html\r\n"
+  				"Content-Length: " << std::filesystem::file_size(path.getPath()) << "\r\n"
+					//  			"Connection: Close\r\n"
+  				"\r\n"; 
 				while(std::getline(file, line)) {
-  		response << line << '\n';	
-  		}
-  		//	response << '\n';
-  		std::cout << "sending code 200\n";
+  				response << line << '\n';	
+  			}
+  			//	response << '\n';
+  			std::cout << "sending code 200\n";
   		}
 			else {
+				std::fstream file404{};
+				std::string path404 {"404.html"};
+				file404.open(path404, std::ios::in);
+				response << 
+					"HTTP/1.1 404 Not Found\r\n"
+    			"Content-Type: text/html; charset=UTF-8\r\n"
+  				"Content-Length: " << std::filesystem::file_size(path404) << "\r\n"
+  				"\r\n"; 
+				std::string line404 {};
+				while(std::getline(file404, line404)) {
+  				response << line404 << '\n';	
+  			}
+  			std::cout << path.getPath() << " is not a valid path, sending 404\n";
+			}
+		}
+
+		else {
+			std::fstream file404{};
+			std::string path404 {"404.html"};
+			file404.open(path404, std::ios::in);
 			response << 
 				"HTTP/1.1 404 Not Found\r\n"
-    		"Content-Type: text/html; charset=UTF-8\r\n\r\n";
-  		std::cout << path << " is not a valid path, sending 404\n";
-				}
-			}
-		
-		else {
-			response << 
-				"HTTP/1.1 404 Not Found\r\n\r\n"
-    		"Content-Type: text/html; charset=UTF-8\r\n";
-  		std::cout << path << " is not a valid path, sending 404\n";
+    		"Content-Type: text/html; charset=UTF-8\r\n"
+  			"Content-Length: " << std::filesystem::file_size(path404) << "\r\n"
+  			"\r\n"; 
+			std::string line404 {};
+			while(std::getline(file404, line404)) {
+  			response << line404 << '\n';	
+  		}
+  		std::cout << path.getPath() << " is not a valid path, sending 404\n";
 		}
 
 		//send data to the socket
 		ssize_t byteCount = { send(acceptSocket, response.str().c_str(), response.str().size(), 0) };
 		close(acceptSocket);
-
 		if(byteCount == 0) {
 			std::cout << "server send error";
 			return -1;
@@ -156,7 +175,7 @@ int main() {
 		else {
 			std::cout << "server sent " << byteCount << " bytes" << '\n';
 		}
-}
+	}
 	close(serverSocket);
 	return 0;
 }
