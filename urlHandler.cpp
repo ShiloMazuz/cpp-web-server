@@ -16,16 +16,16 @@ void URL::erase(std::size_t a, std::size_t b) {
 }
 
 void URL::normalizePath() {
-  while(m_path.find("../") != std::string::npos) {
-    m_path.erase(m_path.find("../"), 3);
+  while(m_path.find("/../") != std::string::npos) {
+    m_path.erase(m_path.find("/../")+1, 3);
   }
   std::cout << "normalized path: " <<  getPath() << '\n';
   return;
 }
 
 std::string URL::normalizePath(std::string path) {
-  while(path.find("../") != std::string::npos) {
-    path.erase(path.find("../"), 3);
+  while(path.find("/../") != std::string::npos) {
+    path.erase(path.find("/../")+1, 3);
   }
   return path;
 }
