@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sstream>
 #include <string>
+#include <fstream>
 
 bool checkEcho(std::string& path) {
 	return (path.starts_with("/echo/"));
@@ -89,7 +90,7 @@ int main() {
   		std::cout << "sending code 200\n";
 		}
 
-		else if ("/user-agent") {
+		else if (path == "/user-agent") {
 			std::string userAgent { fetchParameter(str, "User-Agent: ") };
 			response <<
  				"HTTP/1.1 200 OK\r\n\r\n"
@@ -99,13 +100,13 @@ int main() {
     		userAgent;
   		std::cout << "sending code 200\n";
 		}
-		else if(checkEcho(path)) {
+		else if(path.substr(0, 6) == "/echo/") {
 			path.erase(0, 6);
 			response <<
  				"HTTP/1.1 200 OK\r\n\r\n"
   			"Content-Type: text/plain\r\n"
   			"Content-Length: " << path.size() << "\r\n"
-  			"\r\n" << path;
+  			"\r\n" << path << '\n';
   		std::cout << "sending code 200\n";
 
 		}
