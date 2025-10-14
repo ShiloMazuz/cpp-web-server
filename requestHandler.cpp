@@ -3,23 +3,24 @@
 #include <string_view>
 #include "requestHandler.h"
 
-class requestHandler {
-  requestHandler(std::string requestStr)
-  : requestString {requestStr}
-  {
-  }
-  requestType getRequestType(std::string request) {
-  if(request == "GET") return GET;
-  if(request == "POST") return POST;
-    return ERROR;
-  }
+requestHandler::requestHandler(std::string& requestStr)
+: m_requestString {requestStr}
+{
+  getRequestHeader();
+}
 
-  void getRequestHeader (std::string_view requestStr) {
-    std::string header {};
-    std::getline(requestStr, header);
-		std::string method, urlPath, version;
-		std::istringstream headerLine {header};
-		headerLine >> method >> urlPath >> version;
-		setRequestType(method);
-  }
-};
+MethodType requestHandler::methodToEnum(std::string method) {
+  if(method == "GET") return MethodType::GET;
+  if(method == "POST") return MethodType::POST;
+  return MethodType::ERROR;
+}
+
+void requestHandler::getRequestHeader () {
+  std::string requestLine{};
+  std::getline(m_requestString, requestLine);
+	std::string method, urlPath, version;
+	std::istringstream headerLine {requestLine};
+	headerLine >> method >> urlPath >> version;
+	setMethodType(method);
+	m_route.setPath(urlPath);
+}

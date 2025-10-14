@@ -1,4 +1,5 @@
 #include "urlHandler.h"
+#include "requestHandler.h"
 #include <iostream>
 #include <filesystem>
 #include <sys/socket.h>
@@ -84,26 +85,28 @@ int main(int argc, char* argv[]) {
 			std::cout << "data recieved: \n" << str << '\n';
 		}
 
-		std::istringstream data { str };
-		std::string header;
-		std::getline(data, header);
-		std::string method, urlPath, version;
-		std::istringstream headerLine {header};
-		headerLine >> method >> urlPath >> version;
-		URL path {urlPath};
+		requestHandler data{ str };
+		//std::istringstream data { str };
+		//std::string header;
+		//std::getline(data, header);
+		//std::string method, urlPath, version;
+		//std::istringstream headerLine {header};
+		//headerLine >> method >> urlPath >> version;
+		//URL path {urlPath};
 
 		std::stringstream response;
-		std::cout << "path: " << path.getPath() << '\n';
+		std::cout << "path: " << data.getRoute() << '\n';
+		//std::cout << "path: " << path.getPath() << '\n';
 
-		if(path.getPath() == "/") {
+		if(data.getRoute() == "/") {
 			response <<
  				"HTTP/1.1 200 OK\r\n"
     		"Content-Type: text/html; charset=UTF-8\r\n\r\n";
   		std::cout << "sending code 200\n";
 		}
 
-		else if (path.getPath() == "/user-agent") {
-			std::string userAgent { fetchParameter(str, "User-Agent: ") };
+		else if (data.getRoute() == "/user-agent") {
+			std::string userAgent { fetchParameter(data.getRequestString(), "User-Agent: ") };
 			response <<
  				"HTTP/1.1 200 OK\r\n"
     		"Content-Type: text/html; charset=UTF-8\r\n"
@@ -112,27 +115,27 @@ int main(int argc, char* argv[]) {
     		userAgent;
   		std::cout << "sending code 200\n";
 		}
-		else if(path.getPath().substr(0, 6) == "/echo/") {
-			path.erase(0, 6);
+		else if(data.getRoute().substr(0, 6) == "/echo/") {
+			data.setRoute(data.getRoute().erase(0, 6));
 			response <<
  				"HTTP/1.1 200 OK\r\n"
   			"Content-Type: text/plain\r\n"
-  			"Content-Length: " << path.getPath().size() << "\r\n"
-  			"\r\n" << path.getPath() << '\n';
+  			"Content-Length: " << data.getRoute().size() << "\r\n"
+  			"\r\n" << data.getRoute() << '\n';
   		std::cout << "sending code 200\n";
 
 		}
 
-		else if(path.getPath().substr(0, 7) == "/files/" && argDirectory) {
-			path.erase(0, 7);
+		else if(data.getRoute().substr(0, 7) == "/files/" && argDirectory) {
+			data.setRoute(data.getRoute().erase(0, 7));
 			std::fstream file {};
-			file.open(path.getPath(), std::ios::in);
-			if(file.is_open() && !std::filesystem::is_directory(path.getPath())) {
+			file.open(data.getRoute(), std::ios::in);
+			if(file.is_open() && !std::filesystem::is_directory(data.getRoute())) {
 				std::string line{};
 				response <<
  					"HTTP/1.1 200 OK\r\n"
   				"Content-Type: text/html\r\n"
-  				"Content-Length: " << std::filesystem::file_size(path.getPath()) << "\r\n"
+  				"Content-Length: " << std::filesystem::file_size(data.getRoute()) << "\r\n"
 					//  			"Connection: Close\r\n"
   				"\r\n"; 
 				while(std::getline(file, line)) {
@@ -154,7 +157,7 @@ int main(int argc, char* argv[]) {
 				while(std::getline(file404, line404)) {
   				response << line404 << '\n';	
   			}
-  			std::cout << path.getPath() << " is not a valid path, sending 404\n";
+  			std::cout << data.getRoute() << " is not a valid path, sending 404\n";
 			}
 		}
 
@@ -171,7 +174,7 @@ int main(int argc, char* argv[]) {
 			while(std::getline(file404, line404)) {
   			response << line404 << '\n';	
   		}
-  		std::cout << path.getPath() << " is not a valid path, sending 404\n";
+  		std::cout << data.getRoute() << " is not a valid path, sending 404\n";
 		}
 
 		//send data to the socket
