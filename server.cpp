@@ -10,11 +10,6 @@
 #include <string>
 #include <fstream>
 
-bool checkEcho(std::string& path) {
-	return (path.starts_with("/echo/"));
-}
-
-
 int main(int argc, char* argv[]) {
   using std::string_literals::operator""s;
 	bool argDirectory { false };
@@ -83,8 +78,8 @@ int main(int argc, char* argv[]) {
 		data.generateResponseToRequest();
 
  		//send data to the socket
-		ssize_t byteCount = { send(acceptSocket, data.getResponseStr().c_str(), data.getResponseStr().size(), 0) };
-		close(acceptSocket);
+ 		ssize_t byteCount = { data.sendResponse(acceptSocket) };
+
 		if(byteCount == 0) {
 			std::cout << "server send error";
 			return -1;
@@ -92,6 +87,8 @@ int main(int argc, char* argv[]) {
 		else {
 			std::cout << "server sent " << byteCount << " bytes" << '\n';
 		}
+ 		shutdown(acceptSocket, SHUT_WR);
+ 		close(acceptSocket);
 	}
 	close(serverSocket);
 	return 0;

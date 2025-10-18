@@ -20,6 +20,7 @@ private:
   MethodType m_methodType{ MethodType::GET };
   URL m_route { "/" };
   std::stringstream m_response {};
+  std::string::size_type m_headerSize {};
 
 private:
   void methodToResponse();
@@ -33,6 +34,8 @@ public:
   std::string getRoute()          { return m_route.getPath(); };
   std::string getRequestString()  { return m_requestString.str(); };
   MethodType getMethodType()      { return m_methodType; };
+  std::string::size_type getHeaderSize()            { return m_headerSize; };
+  ssize_t getHeaderSizeT()            { return static_cast<ssize_t>(m_headerSize); };
 
   void generateResponseToRequest() {
     methodToResponse();
@@ -42,11 +45,13 @@ public:
     return m_response.str();
   }
 
+  ssize_t sendResponse(int acceptSocket);
   MethodType methodToEnum(std::string method);
   //setter functions
   void setMethodType(MethodType methodType) { m_methodType = methodType; }
   void setMethodType(std::string& methodType) { m_methodType = methodToEnum(methodType); }
   void setRoute(std::string route) { m_route.setPath(route); };
+  void setHeaderSize(std::string::size_type size) { m_headerSize = size; };
 };
 
 #endif
