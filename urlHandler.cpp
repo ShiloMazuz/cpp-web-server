@@ -27,5 +27,6 @@ std::string URL::normalizePath(std::string path) {
   while(path.find("/../") != std::string::npos) {
     path.erase(path.find("/../")+1, 3);
   }
+  std::cout << "normalized path: " <<  path << '\n';
   return path;
 }
