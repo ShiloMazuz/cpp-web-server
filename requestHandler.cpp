@@ -148,10 +148,10 @@ ssize_t requestHandler::sendResponse(int acceptSocket) {
 		std::string nextChunk { getResponseStr().substr(static_cast<std::string::size_type>(byteCount), sendBufferSize) };
 		if(byteCount >= getHeaderSizeT()) {
 			std::string toSend {};
-			toSend += hexBufferSize;
-			toSend += "\r\n" ;
-			toSend += nextChunk ;
-			toSend += "\r\n" ;
+			toSend += hexBufferSize + "\r\n" + nextChunk + "\r\n";
+ // 		toSend += "\r\n" ;
+ // 		toSend += nextChunk ;
+ // 		toSend += "\r\n" ;
 			byteCount += send(acceptSocket, toSend.c_str(), toSend.size(), 0);
 			byteCount -= 4+static_cast<ssize_t>(hexBufferSize.size());
 		}
