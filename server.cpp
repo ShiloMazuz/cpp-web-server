@@ -10,6 +10,7 @@
 #include <string>
 #include <fstream>
 #include <thread>
+#include <chrono>
 
 int main(int argc, char* argv[]) {
   using std::string_literals::operator""s;
@@ -62,10 +63,12 @@ int main(int argc, char* argv[]) {
 			return -1;
 		}
 		//recieve data into the socket
-		std::thread newThread([&]() -> void {
+		std::thread newThread([&acceptSocket]() {
 			char receiveBuffer[300] {};
 			std::string str;
 			ssize_t recvByteCount = recv(acceptSocket, receiveBuffer,sizeof(receiveBuffer), 0);
+			std::this_thread::sleep_for(std::chrono::duration(std::chrono::seconds(2)));
+			std::cout << "recvByteCount: " << recvByteCount << '\n';
 			if(recvByteCount == -1) {
 				std::cout << "server send error";
 				close(acceptSocket);
@@ -92,6 +95,7 @@ int main(int argc, char* argv[]) {
  			shutdown(acceptSocket, SHUT_WR);
  			close(acceptSocket);
 		});
+		newThread.join();
 	}
 	close(serverSocket);
 	return 0;
