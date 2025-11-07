@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <thread>
 
 int main(int argc, char* argv[]) {
   using std::string_literals::operator""s;
@@ -47,7 +48,7 @@ int main(int argc, char* argv[]) {
 	}
 	//listen on the socket
 	while(true) {
-		constexpr int maxConnections {3};
+		constexpr int maxConnections {100};
 		if(listen(serverSocket, maxConnections) == -1) {
 			std::cout << "listen(): Error listening on socket " << '\n';
 		}
@@ -61,34 +62,36 @@ int main(int argc, char* argv[]) {
 			return -1;
 		}
 		//recieve data into the socket
-		char receiveBuffer[300] {};
-		std::string str;
-		ssize_t recvByteCount = recv(acceptSocket, receiveBuffer,sizeof(receiveBuffer), 0);
-		if(recvByteCount == -1) {
-			std::cout << "server send error";
-			close(acceptSocket);
-			return -1;
-		}
-		else {
-			str= receiveBuffer;
-			std::cout << "data recieved: \n" << str << '\n';
-		}
+		std::thread newThread([&]() -> void {
+			char receiveBuffer[300] {};
+			std::string str;
+			ssize_t recvByteCount = recv(acceptSocket, receiveBuffer,sizeof(receiveBuffer), 0);
+			if(recvByteCount == -1) {
+				std::cout << "server send error";
+				close(acceptSocket);
+				std::exit(-1);
+			}
+			else {
+				str= receiveBuffer;
+				std::cout << "data recieved: \n" << str << '\n';
+			}
 
-		requestHandler data{ str };
-		data.generateResponseToRequest();
+			requestHandler data{ str };
+			data.generateResponseToRequest();
 
- 		//send data to the socket
- 		ssize_t byteCount = { data.sendResponse(acceptSocket) };
+ 			//send data to the socket
+ 			ssize_t byteCount = { data.sendResponse(acceptSocket) };
 
-		if(byteCount == 0) {
-			std::cout << "server send error";
-			return -1;
-		}
-		else {
-			std::cout << "server sent " << byteCount << " bytes" << '\n';
-		}
- 		shutdown(acceptSocket, SHUT_WR);
- 		close(acceptSocket);
+			if(byteCount == 0) {
+				std::cout << "server send error";
+				std::exit(-1);
+			}
+			else {
+				std::cout << "server sent " << byteCount << " bytes" << '\n';
+			}
+ 			shutdown(acceptSocket, SHUT_WR);
+ 			close(acceptSocket);
+		});
 	}
 	close(serverSocket);
 	return 0;
